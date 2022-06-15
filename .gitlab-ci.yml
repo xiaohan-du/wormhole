@@ -1,0 +1,72 @@
+image: openjdk:11-jdk
+
+default:
+  tags:
+#    - comsc-ci
+    - general-docker
+
+
+stages:
+  - assemble
+  - build
+  - publish
+  - deploy
+
+before_script:
+  - echo $GRADLE_HOME
+  - echo `pwd`
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+  - rm -f  .gradle/caches/modules-2/modules-2.lock
+  - rm -fr .gradle/caches/*/plugin-resolution/
+  - chmod +x gradlew
+cache:
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
+
+assemble:gradle:
+  stage: assemble
+  only:
+    - tags
+  script:
+    - ./gradlew shadowJar
+
+build:gradle:
+  stage: build
+  only:
+    - tags
+  script:
+    - ./gradlew buildAndReport
+  artifacts:
+    name: "$CI_JOB_NAME"
+    paths:
+      - ./build/reports/tests/
+      - ./build/reports/checkstyle/
+      - ./build/jacocoHtml
+      - ./build/libs/*.jar
+      - ./build/libs/*.log
+#      - ./build/reports/pitest
+    expire_in: 4 week
+
+
+pages:
+
+  stage: publish
+
+
+  script:
+    - pwd
+    - mv ./build/reports/tests/ public
+    - mv ./build/reports/checkstyle/ public
+#    - mv ./build/reports/pitest/ public
+    - mv ./build/jacocoHtml/ public
+    - mv ./build/libs/*.jar public
+    - pwd
+    - ls -lR public
+
+  artifacts:
+    paths:
+      - public
+
+  only:
+    - tags
